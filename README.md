@@ -6,15 +6,31 @@ This documentation guides you in setting up a cluster with two master nodes, two
 ## Environment
 |Role|FQDN|IP|OS|RAM|CPU|API Version|
 |----|----|----|----|----|----|----|
-|Master|kmaster1.example.com|10.0.1.24|Ubuntu 20.04|4G|2|1.19|
-|Master|kmaster2.example.com|10.0.1.100|Ubuntu 20.04|4G|2|1.19|
-|Worker|kworker1.example.com|10.0.1.162|Ubuntu 20.04|1G|1|1.19|
-|Worker|kworker2.example.com|10.0.1.5|Ubuntu 20.04|1G|1|1.19|
-|HAproxy|lb.example.com|10.0.1.84|Ubuntu 20.04|1G|1|
+|Master|kmaster1.example.com|172.31.2.201|Ubuntu 20.04|4G|2|1.19|
+|Master|kmaster2.example.com|172.31.3.131|Ubuntu 20.04|4G|2|1.19|
+|Worker|kworker1.example.com|172.31.37.17|Ubuntu 20.04|1G|1|1.19|
+|Worker|kworker2.example.com|172.31.36.174|Ubuntu 20.04|1G|1|1.19|
+|HAproxy|lb.example.com|1172.31.45.53|Ubuntu 20.04|1G|1|
 
 
 > * Perform all the commands as root user unless otherwise specified
 
+## become a roor
+```
+sudo -i
+
+```
+
+## add entry in /etc/hosts in all machines
+##### /etc/hosts
+```
+172.31.2.201 kmaster1.example.com example.com kmaster1
+172.31.3.131 kmaster2.example.com example.com kmaster2
+172.31.37.17 kworker1.example.com example.com kworker1
+172.31.36.174 kworker2.example.com example.com kworker2
+172.31.45.53 klb.example.com example.com klb
+
+```
 
 ## Set up load balancer node
 ##### Install Haproxy
@@ -25,7 +41,7 @@ apt update && apt install -y haproxy
 Append the below lines to **/etc/haproxy/haproxy.cfg**
 ```
 frontend kubernetes-frontend
-    bind 10.0.1.84:6443
+    bind 172.31.45.53:6443
     mode tcp
     option tcplog
     default_backend kubernetes-backend
@@ -34,8 +50,8 @@ backend kubernetes-backend
     mode tcp
     option tcp-check
     balance roundrobin
-    server kmaster1 10.0.1.24:6443 check fall 3 rise 2
-    server kmaster2 10.0.1.100:6443 check fall 3 rise 2
+    server kmaster1 172.31.2.201:6443 check fall 3 rise 2
+    server kmaster2 172.31.3.131:6443 check fall 3 rise 2
 ```
 ##### Restart haproxy service
 ```
@@ -83,9 +99,14 @@ apt update && apt install -y kubeadm=1.19.2-00 kubelet=1.19.2-00 kubectl=1.19.2-
 ## On any one of the Kubernetes master node (Eg: kmaster1)
 ##### Initialize Kubernetes Cluster
 ```
-kubeadm init --control-plane-endpoint="10.0.1.84:6443" --upload-certs --apiserver-advertise-address=10.0.1.24 --pod-network-cidr=192.168.0.0/16
+kubeadm init --control-plane-endpoint="172.31.45.53:6443" --upload-certs --apiserver-advertise-address=172.31.2.201 --pod-network-cidr=192.168.0.0/16
 ```
 Copy the commands to join other master nodes and worker nodes.
+
+```
+the output ofkubeadm init command generate kubeadm join(other masters) , some directories and kubeadm join(worker only)
+directories you need to create as a regular user, get out of root and become a regularuser
+```
 ##### Deploy Calico network
 ```
 kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://docs.projectcalico.org/v3.15/manifests/calico.yaml
